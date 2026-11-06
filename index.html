@@ -12,7 +12,7 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-
 input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 body{background:#000;color:var(--ink)}#fit{position:fixed;inset:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);visibility:hidden;pointer-events:none}
 /* 画面は決まった大きさ（STG）の「舞台」。端末に合わせて拡大縮小し、余りは真っ黒 */
-#stage{--sw:430px;--sh:900px;--vw:calc(var(--sw)/100);--vh:calc(var(--sh)/100);position:fixed;left:50%;top:50%;width:var(--sw);height:var(--sh);transform:translate(-50%,-50%) scale(var(--k,1));transform-origin:center;background:var(--bg);color:var(--ink);font:14px/1.4 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#stage{--sw:430px;--sh:900px;--vw:calc(var(--sw)/100);--vh:calc(var(--sh)/100);position:fixed;left:50%;top:50%;width:var(--sw);height:var(--sh);transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(var(--k,1));transform-origin:center;background:var(--bg);color:var(--ink);font:14px/1.4 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
 header{padding:8px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
 #log{font-size:13px;line-height:1.3;height:1.3em;overflow:hidden;flex:1;min-width:0;white-space:nowrap;text-overflow:ellipsis}.le{white-space:pre-line}
 button{font:inherit;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:6px 10px}
@@ -92,7 +92,7 @@ main{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;
 #ch .card{flex:none}
 #chz{flex:none;padding:4px 8px 5px}
 #chz h3{margin:0 0 3px}
-#chz #ch{min-height:0;gap:0}body.dealing #chz{display:block!important}body.dealing #chz #ch{min-height:60px}body.dealing #ph{min-height:100px}
+#chz #ch{min-height:0;gap:0}body.dealing #chz{display:block!important}body.dealing #chz #ch{min-height:60px}#ph{min-height:100px}
 #chz.mzk #ch{cursor:pointer}
 #chz #ch.spr{overflow-x:auto!important;justify-content:flex-start;gap:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 #chz #ch.spr::-webkit-scrollbar{display:none}
@@ -1594,7 +1594,7 @@ let CHSP=0;
 function fitHand(){const r=$('ch'),z=$('chz');if(!r||!z)return;const cs=[...r.children],n=cs.length,mzk=!!(G&&G.p&&mz(0)),asel=!!(ASEL&&ASEL.oh);
  if(!mzk)CHSP=0;const sp=asel||(mzk&&!!CHSP);
  r.classList.toggle('spr',sp);z.classList.toggle('mzk',mzk&&!asel);r.style.gap='';cs.forEach(c=>{c.style.marginLeft=''});
- z.style.display=n?'':'none';
+ z.style.display='';   // 相手の手札がなくても、手札エリアの場所は確保しておく（盤面の高さが変わらない）
  if(sp||n<2)return;const avail=r.clientWidth;if(!avail)return;
  const ws=cs.map(c=>c.offsetWidth),sum=ws.reduce((a,b)=>a+b,0);if(sum+6*(n-1)<=avail){r.style.gap='6px';return}
  const ov=Math.min((sum-avail)/(n-1),Math.min(...ws)-10);r.style.gap='0';cs.forEach((c,i)=>{if(i)c.style.marginLeft=(-Math.ceil(ov))+'px'})}
@@ -1640,7 +1640,7 @@ function render(){if(!GUEST&&G&&!G.view)try{G.p.forEach(jrWrapP)}catch(e){}turnB
  $('ps').replaceChildren(...me.sh.map(c=>{if(mz(0)||(ASEL&&ASEL.vsh))return shRv(c);const b=document.createElement('div');b.className='shield';b.textContent='';return b}),...shPh(me.sh.length));
  $('ph').replaceChildren(...phWrap(me.hand.map(c=>{const e=cardEl(c,{glow:G.sun===0&&isSun(c)}),sp=c.type==='spell',can=!ASEL&&!sel&&mine&&(sp?((G.spl|0)<spMax(0)&&spOK(0)&&!!SP[c.name]):c.evo?evoBases(me,c).length>0:(G.sum|0)<suMax(0))&&playable(me,c);if(!ASEL&&can&&!sel)e.classList.add('ok');
   if(can&&sp)e.onclick=()=>uiSpell(c);else if(can&&c.evo)e.onclick=()=>evoUI(c);else if(can)e.onclick=()=>uiSummon(c);return e})));
- const aoh=ASEL&&ASEL.oh;$('ch').style.height=(mz(0)||aoh)?'94px':'60px';$('ch').replaceChildren(...cp.hand.map(c=>{if(G.sun===1&&isSun(c))return cardEl(c,{glow:true});if(mz(0)||aoh==='view')return cardEl(c);const e=cardEl(c,{back:true});if(aoh!=='blind')e.classList.add('mini');return e}));$('grv').hidden=true;$('ijl').hidden=!IJ(me);if(!IJ(me)&&$('ij').checked){$('ij').checked=false;$('fu').checked=true}$('end').disabled=!mine;$('abar').classList.toggle('off',!mine);abarSel(mine);wrapAll();try{fitMons();fitHand()}catch(e){}try{pvRefresh()}catch(e){}aselApply();try{fitPH()}catch(e){}try{mnSlide()}catch(e){}try{drawWatch()}catch(e){}if(NET&&!G.view)netSnapSoon()}
+ const aoh=ASEL&&ASEL.oh;$('ch').style.height='94px';$('ch').replaceChildren(...cp.hand.map(c=>{if(G.sun===1&&isSun(c))return cardEl(c,{glow:true});if(mz(0)||aoh==='view')return cardEl(c);return cardEl(c,{back:true})}));$('grv').hidden=true;$('ijl').hidden=!IJ(me);if(!IJ(me)&&$('ij').checked){$('ij').checked=false;$('fu').checked=true}$('end').disabled=!mine;$('abar').classList.toggle('off',!mine);abarSel(mine);wrapAll();try{fitMons();fitHand()}catch(e){}try{pvRefresh()}catch(e){}aselApply();try{fitPH()}catch(e){}try{mnSlide()}catch(e){}try{drawWatch()}catch(e){}if(NET&&!G.view)netSnapSoon()}
 function doAtk(tg,k){if(!sel)return;const m=sel,run=()=>{if(sel!==m&&!G.p[0].field.includes(m))return;sel=null;if(GUEST){netCmd({t:'atk',mi:G.p[0].field.indexOf(m),tg,k});render();return}G.sidx=k;attack(0,m,tg,msg=>say(msg))};
  if(TAPC>=1){const tn=tg==='p'?'プレイヤー':tg==='s'?'シールド':'CPUの'+(G.p[1].field[tg]&&G.p[1].field[tg].c.name)+'';cfm(m.c.name+'で'+tn+'を攻撃しますか？',run)}else run()}
 function uiEnd(){const go=()=>GUEST?netCmd({t:'end'}):endTurn();if(TAPC>=1&&G&&!G.over&&G.p[0].field.some(m=>canSel(0,m)))cfm('まだ攻撃できるモンスターがいます。ターンエンドしますか？',go);else go()}
@@ -2957,14 +2957,20 @@ window.cpuAiVersion=()=>AI.ver;
 </script>
 <script>
 // ---- 画面の比率：ここ（w と h）だけを変えれば、全体がその比率に合う。URLに ?stage=430x932 のように付けて試すこともできる ----
-const STG={w:430,h:900,k:1};
-(function(){const q=new URLSearchParams(location.search).get('stage'),m=q&&q.match(/^(\d+)x(\d+)$/);if(m){STG.w=+m[1];STG.h=+m[2]}
+// ---- 画面の向き：端末を横にしても、画面は縦長のまま（舞台を端末の回転の逆に回して、端末に対する向きを変えない）。?rot=off で回さない、?rot=flip で回す向きを逆にする ----
+const STG={w:430,h:900,k:1,rot:0,cx:0,cy:0};
+(function(){const qs=new URLSearchParams(location.search),q=qs.get('stage'),m=q&&q.match(/^(\d+)x(\d+)$/),rm=qs.get('rot')||'';if(m){STG.w=+m[1];STG.h=+m[2]}
  const st=document.getElementById('stage'),fit=document.getElementById('fit'),o=Element.prototype.getBoundingClientRect;
  st.style.setProperty('--sw',STG.w+'px');st.style.setProperty('--sh',STG.h+'px');
- function fitStage(){const cs=getComputedStyle(fit),pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0,pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0,W=innerWidth-pl-pr,H=innerHeight-pt-pb,k=Math.min(W/STG.w,H/STG.h);STG.k=k;st.style.left=(pl+W/2)+'px';st.style.top=(pt+H/2)+'px';st.style.setProperty('--k',k)}
- fitStage();addEventListener('resize',fitStage);addEventListener('orientationchange',()=>setTimeout(fitStage,150));if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);
- // 拡大縮小しても、座標を使う処理（カードが飛ぶ演出など）が舞台の中の座標で動くように、位置の取得を舞台の中の座標にそろえる
- Element.prototype.getBoundingClientRect=function(){const r=o.call(this);if(this===st||!st.contains(this))return r;const s=o.call(st),k=STG.k||1;return new DOMRect((r.left-s.left)/k,(r.top-s.top)/k,r.width/k,r.height/k)}})();
+ function angle(){const so=screen.orientation;if(so&&typeof so.angle==='number')return so.angle;if(typeof window.orientation==='number')return (360-window.orientation)%360;return 0}
+ function fitStage(){const cs=getComputedStyle(fit),pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0,pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0,W=innerWidth-pl-pr,H=innerHeight-pt-pb,a=angle();
+  let rot=0;if(rm!=='off'&&W>H&&STG.h>STG.w&&(a===90||a===270))rot=(a===90?-90:90)*(rm==='flip'?-1:1);   // 端末が横向きのとき：端末の回転を打ち消す（パソコンなど、回転していない横長はそのまま左右に黒）
+  const k=Math.min((rot?H:W)/STG.w,(rot?W:H)/STG.h);STG.k=k;STG.rot=rot;STG.cx=pl+W/2;STG.cy=pt+H/2;
+  st.style.left=STG.cx+'px';st.style.top=STG.cy+'px';st.style.setProperty('--k',k);st.style.setProperty('--r',rot+'deg')}
+ fitStage();addEventListener('resize',fitStage);addEventListener('orientationchange',()=>{fitStage();setTimeout(fitStage,150);setTimeout(fitStage,500)});if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);try{screen.orientation.addEventListener('change',()=>{fitStage();setTimeout(fitStage,150)})}catch(e){}
+ try{const lk=()=>{try{screen.orientation.lock('portrait').catch(()=>{})}catch(e){}};lk();addEventListener('pointerdown',lk,{once:true})}catch(e){}   // 縦向き固定が使える環境（全画面・ホーム画面のアプリなど）では固定する
+ // 拡大縮小・回転しても、座標を使う処理（カードが飛ぶ演出など）が舞台の中の座標で動くように、位置の取得を舞台の中の座標にそろえる
+ Element.prototype.getBoundingClientRect=function(){const r=o.call(this);if(this===st||!st.contains(this))return r;const k=STG.k||1,t=-STG.rot*Math.PI/180,c=Math.cos(t),n=Math.sin(t),P=(x,y)=>{const dx=x-STG.cx,dy=y-STG.cy;return[(dx*c-dy*n)/k+STG.w/2,(dx*n+dy*c)/k+STG.h/2]},p=[P(r.left,r.top),P(r.right,r.top),P(r.left,r.bottom),P(r.right,r.bottom)],xs=p.map(a=>a[0]),ys=p.map(a=>a[1]),x0=Math.min(...xs),y0=Math.min(...ys);return new DOMRect(x0,y0,Math.max(...xs)-x0,Math.max(...ys)-y0)}})();
 </script><script>
 (function(){const t=document.createElement('div');t.id='bdtip';t.hidden=true;document.getElementById('stage').appendChild(t);let cur=null;
 function hide(){t.hidden=true;cur=null}
