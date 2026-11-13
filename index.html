@@ -18,7 +18,7 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-
 input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 body{background:#000;color:var(--ink)}#fit{position:fixed;inset:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);visibility:hidden;pointer-events:none}
 /* 画面は決まった大きさ（STG）の「舞台」。端末に合わせて拡大縮小し、余りは真っ黒 */
-#stage{--sw:430px;--sh:910px;--cw:72px;--ch:calc(var(--cw)*90/62);--vw:calc(var(--sw)/100);--vh:calc(var(--sh)/100);position:fixed;left:50%;top:50%;width:var(--sw);height:var(--sh);transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(var(--k,1));transform-origin:center;background:var(--bg);color:var(--ink);font:14px/1.4 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#stage{--sw:430px;--sh:910px;--cw:72px;--ch:calc(var(--cw)*90/62);--vw:calc(var(--sw)/100);--vh:calc(var(--sh)/100);position:fixed;left:50%;top:50%;width:var(--fw,var(--sw));height:var(--fh,var(--sh));padding:var(--pt,0px) var(--pr,0px) var(--pb,0px) var(--pl,0px);transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(var(--k,1));transform-origin:center;background:var(--bg);color:var(--ink);font:14px/1.4 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
 header{padding:8px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
 #log{font-size:13px;line-height:1.3;height:1.3em;overflow:hidden;flex:1;min-width:0;white-space:nowrap;text-overflow:ellipsis}.le{white-space:pre-line}
 button{font:inherit;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:6px 10px}
@@ -223,6 +223,18 @@ input,textarea{font-size:16px !important}
 .brkfx>.brkfl{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:radial-gradient(circle,#fff 0,rgba(255,236,160,.9) 40%,rgba(255,236,160,0) 72%);opacity:0;animation:brkFl .3s ease-out forwards}
 @keyframes brkFl{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(2.6)}}
 @keyframes brkS{0%{opacity:1;transform:translate(0,0) rotate(0)}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rt))}}
+/* ===== 画面いっぱいに描く（スマホの縦。v1.87）：「背景・描画領域」と「操作UIの安全領域」を分ける =====
+   舞台(#stage)は表示領域ぜんぶ（上の安全領域だけ黒のまま＝ステータスバーの白い文字が読める）。左右・下は背景が端まで届く。
+   操作UIの置き場（設計サイズ430x910の内側）は、舞台のpadding（--pt/--pr/--pb/--pl＝安全領域ぶん）で決める。
+   --pl/--pr/--pt/--pb は fitStage が舞台の論理px（拡大縮小前）で入れる。?fill=off で従来の表示（黒い余白）に戻る。 */
+html.full{background:linear-gradient(#000 0,#000 env(safe-area-inset-top,0px),var(--bg) env(safe-area-inset-top,0px))}
+#dlg,#pop,#dkv,#cdv,#lgv,#wtv,#dcv,#vs,#bt{padding-left:var(--pl,0px);padding-right:var(--pr,0px);padding-bottom:var(--pb,0px)}
+#vs .vh{bottom:calc(24px + var(--pb,0px))}
+#title{margin:0 calc(-1*var(--pr,0px)) calc(-1*var(--pb,0px)) calc(-1*var(--pl,0px));padding-left:calc(14px + var(--pl,0px));padding-right:calc(14px + var(--pr,0px));padding-bottom:calc(12px + var(--pb,0px))}
+/* v1.88：ログの行とボタンの列を、手札の下（画面の下）へ。境界線は上側に。下に少しだけ余白（STG.bs と同じ値）。 */
+header{border-top:1px solid var(--line);border-bottom:0}
+#abar{border-top:1px solid var(--line);border-bottom:0}
+#game{padding-bottom:6px}
 </style></head><body>
 <div id="fit"></div><div id="stage">
 <div id="title" class="scr"><h1 class="vh">カードマスター</h1><div class="tmenu"><button id="trc" hidden>対戦に戻る</button><button id="tbt">バトルタワー</button><button id="tfree">フリー対戦</button><button class="sub" id="tset">設定</button><button class="sub" id="tbk">バックアップ</button></div><div id="tmsg"></div></div>
@@ -277,15 +289,16 @@ input,textarea{font-size:16px !important}
 <div class="zone"><h3><span>CPUのデッキ <span id="n1"></span></span><span><button class="sub" id="sv1">デッキを見る</button> <button class="sub" id="rr1">再抽選</button></span></h3><div id="dk1"></div></div>
 </div>
 <div id="game" hidden>
-<header><div id="log"></div></header>
-<div id="abar" class="acts off"><button id="end">ターンエンド</button><button class="sub" id="lgb">ログ</button><button class="sub" id="cfg">設定</button><button class="sub" id="grv" hidden disabled>はかば</button><button class="sub" id="quit">終了</button><div id="abar2"></div></div>
 <main id="mn">
 <div class="zone" id="chz"><div class="row" id="ch" style="height:60px;flex-wrap:nowrap;overflow:hidden"></div></div>
 <div class="zone"><h3><span id="cz">CPU</span><span id="ci"></span></h3><div class="bds" id="cbd"></div><div class="sline"><div class="pile" id="cdp"></div><div class="row" id="cs"></div><div class="pile" id="cdk"></div></div><div class="row" id="cf"></div></div>
 <div class="zone"><h3><span id="pz">あなた</span><span id="pi"></span></h3><div class="bds" id="pbd"></div><div class="row" id="pf"></div><div class="sline"><div class="pile" id="pdp"></div><div class="row" id="ps"></div><div class="pile" id="pdk"></div></div>
 <div class="acts" id="ask"></div></div>
 <div class="zone" id="phz"><div class="row" id="ph"></div></div>
-</main></div>
+</main>
+<header><div id="log"></div></header>
+<div id="abar" class="acts off"><button id="end">ターンエンド</button><button class="sub" id="lgb">ログ</button><button class="sub" id="cfg">設定</button><button class="sub" id="grv" hidden disabled>はかば</button><button class="sub" id="quit">終了</button><div id="abar2"></div></div>
+</div>
 <div id="pop" hidden><div class="pbox"><div class="ph2"><b id="ptitle"></b><button class="sub" id="pghost">透過</button></div><div id="pitems"></div><div class="acts" id="pacts"></div></div></div>
 <div id="vs" hidden></div>
 <div id="bt" hidden><div id="btf"></div><div id="btr"><div class="bts" id="bta"></div><div class="bts" id="btd"></div></div><div id="btt"></div></div>
@@ -493,7 +506,12 @@ function jrMoves(evs){const outs=evs.filter(e=>e.t==='out'),ins=evs.filter(e=>e.
   if(o.o===i.o&&o.z===i.z&&o.m===i.m)return;
   mv.push({c:i.c,k:i.k,from:o,to:i,sq:i.sq})});
  return{mv:mv.sort((a,b)=>a.sq-b.sq),lost:outs.filter(o=>!used.has(o))}}
-function mkP(l){const deck=shuffle(l.slice());return jrWrapP({deck,sh:deck.splice(0,5),hand:deck.splice(0,5),field:[],n:0,disc:[],fld:null,rs:{},full:false})}
+// ---- カードの実体（インスタンス）：デッキの1枚ごとに別のオブジェクトにする。同じカードが2枚あっても、手札・場・捨て場などで「どちらの1枚か」を見分けられる
+// （これまでは同じカードが同じオブジェクトだったため、indexOf で最初の1枚が選ばれる・カードが飛ぶ演出の元と先が取り違えられる、などが起きていた）。
+// 中身は元のカードの浅いコピー（… で広げてもそのまま使える）。`_b`（元のカード）は列挙されない持ち物で、実体かどうかの目印。
+const isInst=o=>!!o&&typeof o==='object'&&Object.prototype.hasOwnProperty.call(o,'_b');
+function inst(c){if(!c||typeof c!=='object'||isInst(c))return c;const o=Object.assign({},c);Object.defineProperty(o,'_b',{value:c,enumerable:false});return o}
+function mkP(l){const deck=shuffle(l.map(inst));return jrWrapP({deck,sh:deck.splice(0,5),hand:deck.splice(0,5),field:[],n:0,disc:[],fld:null,rs:{},full:false})}
 // ===== じゃんけん（先攻・後攻の決め方。ORDER==='jk' のとき）
 // 手：0=グー 1=チョキ 2=パー。jkWin(a,b)：0=あいこ／1=aの勝ち／2=bの勝ち
 const JKI=['✊','✌️','✋'],jkWin=(a,b)=>a===b?0:((b-a+3)%3===1?1:2);
@@ -536,15 +554,15 @@ const NMAP3={"モグドリラー":"モグドリル","ゾンビ":"インプ","シ
 const NMRX3=/モグドリラー|ゾンビ|シルガード|ワドルディ|かまイタチ|チリー|サンダー(?!スプレー)/g;
 function rnK(k){let s=null;try{s=localStorage.getItem(k);const f='cm_nm2_'+k,g='cm_nm3_'+k;let ch=false;if(!localStorage.getItem(f)){if(typeof s==='string'){s=s.replace(NMRX2,m=>NMAP2[m]);ch=true}localStorage.setItem(f,'1')}if(!localStorage.getItem(g)){if(typeof s==='string'){s=s.replace(NMRX3,m=>NMAP3[m]);ch=true}localStorage.setItem(g,'1')}if(ch&&typeof s==='string')localStorage.setItem(k,s)}catch(e){}return rnS(s)}
 const SUSPK='cm_susp_v1';
-function gEnc(root){if(!CARDSET.size)ALLC.forEach(c=>CARDSET.add(c));const ids=new Map(),tab=[];
+function gEnc(root){if(!CARDSET.size)ALLC.forEach(c=>CARDSET.add(c));const ids=new Map(),tab=[],ins=new Map();
  const enc=v=>{if(v===null)return null;const ty=typeof v;if(ty==='number')return isFinite(v)?v:null;if(ty==='string'||ty==='boolean')return v;if(ty!=='object')return undefined;
-  if(CARDSET.has(v))return{$c:v.name};if(ids.has(v))return{$r:ids.get(v)};
+  if(CARDSET.has(v))return{$c:v.name};if(isInst(v)){if(!ins.has(v))ins.set(v,ins.size+1);return{$c:v.name,$i:ins.get(v)}}if(ids.has(v))return{$r:ids.get(v)};
   if((typeof Node!=='undefined'&&v instanceof Node)||v instanceof Map||v instanceof Set)return undefined;
   const id=tab.length,isA=Array.isArray(v),o=isA?[]:{};ids.set(v,id);tab.push(o);
   if(isA){for(let i=0;i<v.length;i++){const e=enc(v[i]);o.push(e===undefined?null:e)}}else{for(const k in v){const e=enc(v[k]);if(e!==undefined)o[k]=e}}
   return{$r:id}};
  return{t:tab,r:enc(root)}}
-function gDec(d){const objs=d.t.map(o=>Array.isArray(o)?[]:{}),dec=v=>{if(v===null||typeof v!=='object')return v;if('$c' in v)return cardOf(v.$c);if('$r' in v)return objs[v.$r];return v};
+function gDec(d){const im=new Map(),objs=d.t.map(o=>Array.isArray(o)?[]:{}),dec=v=>{if(v===null||typeof v!=='object')return v;if('$c' in v){if(v.$i){if(!im.has(v.$i))im.set(v.$i,inst(cardOf(v.$c)));return im.get(v.$i)}return cardOf(v.$c)}if('$r' in v)return objs[v.$r];return v};
  d.t.forEach((o,i)=>{const t=objs[i];if(Array.isArray(o))o.forEach(x=>t.push(dec(x)));else for(const k in o)t[k]=dec(o[k])});return dec(d.r)}
 function suspGet(){try{const x=rnK(SUSPK),o=x&&!DATAONLY_RX.test(x)?JSON.parse(x):null;return o&&o.v===1&&(o.k==='free'||o.k==='tower')&&o.g?o:null}catch(e){return null}}
 function suspDel(){try{localStorage.removeItem(SUSPK)}catch(e){}}
@@ -682,7 +700,7 @@ function fxGhost(a,c){try{if(!a.e||a.k===undefined)return;const n=a.e.cloneNode(
 function fxGhostRel(c){try{const t=performance.now()+SHREL;FXGH.forEach(g=>{if(g.c===c&&g.until>t)g.until=t});setTimeout(fxGhostApply,SHREL+20)}catch(e){}}
 function fxNote(i,c){try{if(typeof document==='undefined'||SIMMODE||SELFPLAY||!G||G.view)return;if(FXQ.length<20)FXQ.push({i,c})}catch(e){}}
 function fxLayer(){let L=document.getElementById('drfxl');if(!L){L=document.createElement('div');L.id='drfxl';document.getElementById('stage').append(L)}
- const a=document.getElementById('abar'),r=a&&a.getBoundingClientRect(),top=r&&r.height?Math.max(0,r.bottom):0;L.style.top=top+'px';return top}
+ L.style.top='0px';L.style.bottom=barTop()+'px';return 0}   // 演出の層：舞台の上からボタンの列の上まで（原点は舞台の上端）
 let FXN=0,FXWAIT=true;
 function fxBusy(){return FXWAIT&&FXN>0&&!SIMMODE&&!SELFPLAY&&!(typeof AI!=='undefined'&&AI&&AI.fast)}
 function fxGate(f,n){if(!n&&(FXQ.length||(typeof JR!=='undefined'&&JR.ev.length))&&typeof G!=='undefined'&&G&&!G.view&&!SIMMODE&&!SELFPLAY){try{render()}catch(e){}}if(fxBusy())setTimeout(()=>fxGate(f,1),50);else f()}
@@ -732,7 +750,9 @@ function fxFly(jobs,lk){try{
   setTimeout(()=>{try{e.style.visibility='';if(bt0!==undefined)fxGhostRel(jb.b.card||jb.c);const t0=performance.now();let fk=1,sw=false;
    // 毎フレーム、動き元・動き先の今の位置から描き直す（スクロールしてもずれない）
    const put=ep=>{const f=fxFrom(jb.a)||from,t=fxLive(J)||to,fx=f.l+f.w/2,fy=f.t+f.h/2,tx=t.l+t.w/2,ty=t.t+t.h/2;
-    e.style.transform='translate('+(fx+(tx-fx)*ep-cx)+'px,'+(fy+(ty-fy)*ep-cy)+'px) scale('+((f.w+(t.w-f.w)*ep)/w)+','+((f.h+(t.h-f.h)*ep)/h)+')'+(fk===1?'':' scaleX('+fk+')')};
+    // 横向き（タップ済み）の場所から出る・へ入るときは、カードも90度まわしながら飛ぶ（縦の絵を横長に押しつぶさない）
+    const r0=f.w>f.h*1.15?90:0,r1=t.w>t.h*1.15?90:0,ang=r0+(r1-r0)*ep,lw=(r0?f.h:f.w)+((r1?t.h:t.w)-(r0?f.h:f.w))*ep,lh=(r0?f.w:f.h)+((r1?t.w:t.h)-(r0?f.w:f.h))*ep;
+    e.style.transform='translate('+(fx+(tx-fx)*ep-cx)+'px,'+(fy+(ty-fy)*ep-cy)+'px) rotate('+ang+'deg) scale('+(lw/w)+','+(lh/h)+')'+(fk===1?'':' scaleX('+fk+')')};
    const step=ts=>{if(fin)return;const el=Math.max(0,ts-t0);
     if(el<T1){put(FXE(el/T1));return requestAnimationFrame(step)}
     put(1);if(!flip)return done();
@@ -916,7 +936,7 @@ function jkHd(str){const a=str.split('|'),w=+a[4]||0,d=document.createElement('d
  const cell=(e,l,cl)=>{const c=document.createElement('div');c.className='jkc'+(cl?' '+cl:'');const em=document.createElement('span');em.className='jke';em.textContent=e;const lb=document.createElement('span');lb.className='jkl';lb.textContent=H(NT(l));c.append(em,lb);return c};
  const v=document.createElement('span');v.className='jkv';v.textContent='VS';
  d.append(cell(a[0],a[2],w===2?'lose':w===1?'win':''),v,cell(a[1],a[3],w===1?'lose':w===2?'win':''));return d}
-function pop(title,items,acts,onPick){const P=$('pop');PV=null;POPS=[title,items,acts,onPick,!!POPB];P.classList.remove('ghost','cp','cpv');P.style.top='';$('pitems').className='';P.classList.toggle('abot',!!POPB);POPB=false;$('ptitle').textContent=H(NT(title));const JK=String(title).startsWith('じゃんけん');P.classList.toggle('jk',JK);P.classList.toggle('jkpick',JK&&String(title).startsWith('じゃんけん：勝ち'));
+function pop(title,items,acts,onPick){const P=$('pop');PV=null;POPS=[title,items,acts,onPick,!!POPB];P.classList.remove('ghost','cp','cpv');P.style.top='';P.style.bottom='';$('pitems').className='';P.classList.toggle('abot',!!POPB);POPB=false;$('ptitle').textContent=H(NT(title));const JK=String(title).startsWith('じゃんけん');P.classList.toggle('jk',JK);P.classList.toggle('jkpick',JK&&String(title).startsWith('じゃんけん：勝ち'));
  $('pitems').replaceChildren(...items.map(([t,v,ds,col,hd])=>{if(hd!==undefined){if(JK&&String(hd).split('|').length===5)return jkHd(String(hd));const hh=document.createElement('div');hh.className='ph3';hh.textContent=H(NT(hd));return hh}const b=document.createElement('button');if(JK&&JKI.includes(t))b.className='jkh';if(col){btxt(b,t);b.style.cssText='border-color:'+col+';background:'+col+';color:#1a1a1a;font-weight:700;'}else cnTxt(b,H(NT(t)),ds);if(ds){b.disabled=true;b.className='gray'}else b.onclick=()=>{closePop();onPick(v)};return b}));
  $('pacts').replaceChildren(...acts.map(([t,f])=>{const b=document.createElement('button');b.className='sub';btxt(b,t);b.onclick=()=>{closePop();f()};return b}));P.hidden=false}
 $('pghost').onclick=e=>{e.stopPropagation();$('pop').classList.add('ghost')};$('pop').onclick=e=>{$('pop').classList.remove('ghost');if(PV&&e&&e.target===$('pop'))pvClose()};
@@ -1495,9 +1515,11 @@ function aselResolve(t,items){const me=G.p[0],cv=items.filter(it=>it[4]===undefi
  return out}
 function cpCard(it){return it[5]||(it[1]&&typeof it[1]==='object'&&it[1].type?it[1]:null)}
 function cpopOK(t,items,acts,mn){return mn===undefined&&acts.length<=2&&/^デッキから選ぶ|^シールドトリガー：使うカードを選ぶ|枚目に引くカードを選ぶ/.test(String(t))&&items.some(it=>it[4]===undefined)&&items.every(it=>it[4]!==undefined||cpCard(it))}
-function cpopClose(){const P=$('pop');PV=null;P.hidden=true;P.classList.remove('cp','cpv','ghost');P.style.top='';$('pitems').className=''}
+function barTop(){const h=document.querySelector('#game > header'),a=$('abar'),e=h&&h.getBoundingClientRect().height?h:a,r=e&&e.getBoundingClientRect();return r&&r.height?Math.max(0,Math.round(STG.h-r.top)):0}   // 画面の下にある「ログの行＋ボタンの列」の高さ（舞台の下端から、ログの行の上端まで）
+function popAnchor(P){P.style.top='';P.style.bottom=barTop()+'px'}   // カードを選ぶポップアップは、ログの行の上まで。ログの行もボタンも見えて押せるまま
+function cpopClose(){const P=$('pop');PV=null;P.hidden=true;P.classList.remove('cp','cpv','ghost');P.style.top='';P.style.bottom='';$('pitems').className=''}
 function cpopShow(t,items,acts,cb,mn,mx){ASEL={g:G,t,items,acts,cb,mn,mx,sel:new Set(),btn:false,cp:true};PV=null;return cpopDraw()}
-function cpopDraw(){const{t,items,acts,cb,mn,mx}=ASEL;const P=$('pop');P.classList.remove('ghost','cpv','abot','jk','jkpick');P.classList.add('cp');P.style.top=Math.round($('abar').getBoundingClientRect().bottom)+'px';
+function cpopDraw(){const{t,items,acts,cb,mn,mx}=ASEL;const P=$('pop');P.classList.remove('ghost','cpv','abot','jk','jkpick');P.classList.add('cp');popAnchor(P);
  $('ptitle').textContent=H(NT(/^デッキから選ぶ/.test(String(t))?'デッキ':t));$('pacts').replaceChildren();const box=$('pitems');box.className='cards';
  const multi=mn!==undefined,paint=()=>{[...box.querySelectorAll('.cw')].forEach(w=>w.classList.toggle('sel',!!(ASEL&&ASEL.items===items&&ASEL.sel.has(w._k))))};
  const mkW=(it,k)=>{const c=cpCard(it),w=document.createElement('div');w.className='cw'+(it[2]?' no':'');w._k=k;
@@ -1516,13 +1538,13 @@ var PV=null,PCV=null,POPS=null;
 function discOwner(c){const g=G;if(!g||!g.p)return -1;return g.p[0].disc.includes(c)?0:g.p[1].disc.includes(c)?1:-1}
 function discSel(items){const cv=items.filter(it=>it[4]===undefined);return cv.length>0&&cv.every(it=>{const c=cpCard(it);return !!c&&discOwner(c)>=0})}
 function discOK(t,items,acts){return acts.length<=2&&discSel(items)}
-function pvClose(){PV=null;const P=$('pop');if(P.classList.contains('cpv')){P.hidden=true;P.classList.remove('cp','cpv','ghost');P.style.top='';$('pitems').className='';$('pacts').replaceChildren();if(ASEL&&ASEL.cp&&ASEL.g===G&&!G.over)cpopDraw();else if(PCV)popCards(PCV[0],PCV[1],PCV[2]);else if(POPS&&!ASEL){const q=POPS;POPB=q[4];pop(q[0],q[1],q[2],q[3])}}}   // 捨て場を閉じたら、デッキなどの選択画面に戻る
+function pvClose(){PV=null;const P=$('pop');if(P.classList.contains('cpv')){P.hidden=true;P.classList.remove('cp','cpv','ghost');P.style.top='';P.style.bottom='';$('pitems').className='';$('pacts').replaceChildren();if(ASEL&&ASEL.cp&&ASEL.g===G&&!G.over)cpopDraw();else if(PCV)popCards(PCV[0],PCV[1],PCV[2]);else if(POPS&&!ASEL){const q=POPS;POPB=q[4];pop(q[0],q[1],q[2],q[3])}}}   // 捨て場を閉じたら、デッキなどの選択画面に戻る
 function pileView(o){if(!G||!G.p||$('game').hidden||!$('bt').hidden||!$('fl').hidden||!$('dlg').hidden)return;
  const P=$('pop');if(!P.hidden&&!P.classList.contains('cpv')&&!(ASEL&&ASEL.cp)&&!P.classList.contains('ghost'))return;P.classList.remove('ghost');PV={o,g:G};pvDraw()}
 function pvDraw(){if(!PV)return;if(PV.g!==G||!G.p)return pvClose();
  const P=$('pop'),box=$('pitems'),me=G.p[0],list=G.p[PV.o].disc,mine=G.t==0&&!G.over&&!G.busy,
   gok=!!(PV.o===0&&!ASEL&&mine&&me.fld&&me.fld.name==='はかば'&&sumOK(0)&&me.hand.length>0),pb=P.querySelector('.pbox'),st=pb?pb.scrollTop:0;
- P.classList.remove('ghost','abot','jk','jkpick');P.classList.add('cp','cpv');P.style.top=Math.round($('abar').getBoundingClientRect().bottom)+'px';
+ P.classList.remove('ghost','abot','jk','jkpick');P.classList.add('cp','cpv');popAnchor(P);
  const mc=list.filter(c=>c.type==='monster').length,sc=list.filter(c=>c.type==='spell').length;
  $('ptitle').textContent=H(NT((PV.o?'CPU':'あなた')+'の捨て場（'+list.length+'枚）'));
  const cb=document.createElement('button');cb.className='sub';cb.textContent='閉じる';cb.onclick=pvClose;$('pacts').replaceChildren(cb);
@@ -1768,8 +1790,10 @@ const swapW=t=>t==null?t:String(t).replace(/あなた/g,'\u0001').replace(/CPU/g
 const MID={},SID={};D.monsters.forEach(c=>MID[c.id]=c);D.spells.forEach(c=>SID[c.id]=c);
 const PH={id:0,type:'monster',name:'？',star:1,attr:'無',power:0,effect:'',ap:0,dp:0};
 const rid=c=>c.type==='spell'?-c.id:c.id,fromId=n=>n<0?SID[-n]:MID[n];
-const sc=c=>{if(!c)return null;if(c.nul)return[rid(c.orig),c.attr,0,0,1];if(c.orig||c.dn||c.mir||c.spr)return[rid(c),c.attr,c.dn||0,c.orig?rid(c.orig):0,0,c.spr?1:0];return rid(c)};
-const dcd=x=>{if(x===null||x===undefined)return null;if(x===0)return PH;if(typeof x==='number')return fromId(x);const o={...fromId(x[0]),attr:x[1]};if(x[2]){o.dn=x[2];o.mir=true}if(x[4])return blankC(fromId(x[0]),x[1]);if(x[3])o.orig=fromId(x[3]);if(x[5])o.spr=1;return o};
+const sc=c=>{if(!c)return null;if(c.nul)return[rid(c.orig),c.attr,0,0,1,0,jkOf(c)];if(c.orig||c.dn||c.mir||c.spr)return[rid(c),c.attr,c.dn||0,c.orig?rid(c.orig):0,0,c.spr?1:0,jkOf(c)];if(isInst(c))return[rid(c),c.attr,0,0,0,0,jkOf(c)];return rid(c)};
+// ゲスト：ホストの実体の番号（x[6]）が同じカードは、盤面が作り直されても同じオブジェクトを使い回す（同じカードが2枚あっても見分けられる。移動の演出の元と先も、これで取り違えない）
+const gInst=(u,n)=>{const um=(typeof NET!=='undefined'&&NET)?(NET.um||(NET.um=new Map())):null;if(!um)return n;let o=um.get(u);if(!o){um.set(u,n);if(um.size>800)um.delete(um.keys().next().value);return n}Object.keys(o).forEach(k=>{if(!(k in n))delete o[k]});Object.assign(o,n);return o};
+const dcd=x=>{if(x===null||x===undefined)return null;if(x===0)return PH;if(typeof x==='number')return fromId(x);const o={...fromId(x[0]),attr:x[1]};if(x[2]){o.dn=x[2];o.mir=true}if(x[4]){const b=blankC(fromId(x[0]),x[1]);return x[6]?gInst(x[6],b):b}if(x[3])o.orig=fromId(x[3]);if(x[5])o.spr=1;return x[6]?gInst(x[6],o):o};
 const nbytes=s=>new TextEncoder().encode(s).length;
 function viewFor(v){const vi=x=>v?1-x:x,pv=q=>{const p=G.p[q],own=q===v,rev=own||mz(v)||G.sun!==undefined;
  return{n:p.n,dk:p.deck.length,hd:rev?p.hand.map(sc):p.hand.length,sh:mz(v)?p.sh.map(sc):p.sh.length,ds:p.disc.map(sc),fl:sc(p.fld),rs:{ber:p.rs.ber?1:0,hik:p.rs.hik?1:0,mafu:p.rs.mafu?1:0,fuin:p.rs.fuin?1:0},inv:p.inv?1:0,fu:p.full?1:0,ns:p.noST?1:0,dc:p.dc||0,
@@ -1796,7 +1820,7 @@ function rcCheck(){$('rcb').hidden=$('trc').hidden=!rcRead()}
 async function rcGo(){const r=rcRead();if(!r)return;show('netscr');$('nlob').hidden=true;$('nrm').hidden=false;nsay('対戦に再接続しています…');if(await netEnter('guest',r.code,r.sid))NET.decks[1]=(r.deck||[]).map(fromId).filter(Boolean)}
 function surrender(i){if(!G||G.over||G.view)return;closePop();$('bt').hidden=true;FXON=false;Object.keys(PEND).forEach(k=>delete PEND[k]);G.busy=0;G.over=true;G.win=1-i;const w=i?'CPU':'あなた';G.why=w+'の降参';say(w+'が降参した')}
 function netLost(){if(NET&&NET.run){PEND&&Object.keys(PEND).forEach(k=>delete PEND[k]);if(G)G.over=true;pop('相手との通信が切れました',[],[['終了',()=>toSetup()]],()=>{})}else nsay('相手が退出しました。')}
-function popMulti(title,items,mn,mx,acts,onDone){const P=$('pop');PV=null;P.classList.remove('ghost','abot','cp','cpv');P.style.top='';$('pitems').className='';POPB=false;$('ptitle').textContent=H(NT(title));const sel=new Set(),pt=[],ok=document.createElement('button');
+function popMulti(title,items,mn,mx,acts,onDone){const P=$('pop');PV=null;P.classList.remove('ghost','abot','cp','cpv');P.style.top='';P.style.bottom='';$('pitems').className='';POPB=false;$('ptitle').textContent=H(NT(title));const sel=new Set(),pt=[],ok=document.createElement('button');
  const upd=()=>{const n=sel.size;ok.textContent=H(okLb(title,n,mn,mx));ok.disabled=!(n>=mn&&n<=mx);ok.className=ok.disabled?'gray':''};
  ok.onclick=()=>{if(!(sel.size>=mn&&sel.size<=mx))return;closePop();onDone([...sel].sort((a,b)=>a-b))};
  $('pitems').replaceChildren(...items.map(([t,v,ds,col,hd],k)=>{if(hd!==undefined){const hh=document.createElement('div');hh.className='ph3';hh.textContent=H(NT(hd));return hh}const b=document.createElement('button');if(col){b.style.cssText='border-color:'+col+';background:'+col+';color:#1a1a1a;font-weight:700;';btxt(b,t)}else cnTxt(b,H(NT(t)),ds);const paint=()=>{b.classList.toggle('selm',sel.has(k))};paint();if(ds){b.disabled=true;b.className='gray';return b}b.onclick=()=>{if(sel.has(k))sel.delete(k);else{if(sel.size>=mx){if(mx>1)return;sel.clear();pt.forEach(f=>f())}sel.add(k)}paint();upd()};pt.push(paint);return b}));
@@ -1870,7 +1894,7 @@ function guestOn(d,m){if(!NET.ok&&d.t!=='ok')return;switch(d.t){
  case 'vs':vsShow(vsInfo(),null,2800);break;
  case 'ok':if(d.to!==NET.me)break;NET.opp=m.peer;NET.ok=1;if(d.rc){GUEST=true;NET.run=true;NET.hist=[];NET.hn=0;$('rcb').hidden=$('trc').hidden=true;show('game');closePop();$('log').textContent=H('対戦に戻っています…');break}nsay('部屋に入りました。デッキを選んで「準備完了」を押してください。');break;
  case 'hl':NET.hist=d.h.map(([n,t,k])=>({n,s:t,k:k||undefined}));NET.hn=NET.hist.length?NET.hist[NET.hist.length-1].n:0;break;
- case 'st':GUEST=true;NET.run=true;NET.hist=[];NET.hn=0;if(d.sid)try{localStorage.setItem('cm_rc',JSON.stringify({sid:d.sid,code:NET.code||'',deck:(NET.decks[1]||[]).map(rid),t:Date.now()}))}catch(e){}
+ case 'st':GUEST=true;NET.run=true;NET.hist=[];NET.hn=0;NET.um=null;if(d.sid)try{localStorage.setItem('cm_rc',JSON.stringify({sid:d.sid,code:NET.code||'',deck:(NET.decks[1]||[]).map(rid),t:Date.now()}))}catch(e){}
  show('game');closePop();$('fl').hidden=true;$('bt').hidden=true;FXON=false;$('log').textContent='対戦を始めています…';try{document.body.classList.add('dealing')}catch(e){}break;
   case 'go':closePop();break;   // じゃんけんが終わって対戦開始：じゃんけんの表示を閉じる
   case 'de':try{document.body.classList.remove('dealing')}catch(e){}if(G&&G.view)render();break;
@@ -1896,7 +1920,7 @@ function netJr(V){const jm=NET.jm||(NET.jm=new Map()),seen=new Set();
   if(JR.g!==NET){JR.ev.length=0;JR.pend.length=0;JR.g=NET}
   ev.forEach(x=>JR.ev.push(x));if(JR.ev.length>JR.cap)JR.ev.splice(0,JR.ev.length-JR.cap)}
  jm.forEach((m,j)=>{if(!seen.has(j))jm.delete(j)})}
-function popCards(title,cs,acts){const P=$('pop');PV=null;PCV=[title,cs,acts];P.classList.remove('ghost','abot','jk','jkpick');P.classList.add('cp','cpv');P.style.top=Math.round($('abar').getBoundingClientRect().bottom)+'px';
+function popCards(title,cs,acts){const P=$('pop');PV=null;PCV=[title,cs,acts];P.classList.remove('ghost','abot','jk','jkpick');P.classList.add('cp','cpv');popAnchor(P);
  $('ptitle').textContent=H(NT(title+'（'+cs.length+'枚）'));$('pacts').replaceChildren(...acts.map(([t,f])=>{const b=document.createElement('button');b.className='sub';btxt(b,t);b.onclick=()=>{closePop();f()};return b}));
  const box=$('pitems');box.className='cards pv';box.replaceChildren(...cs.map(c=>{const w=document.createElement('div');w.className='cw';w.append(cardEl(c));return w}));P.hidden=false}
 function netCmd(c){if(!NET||!GUEST)return;NET.q=(NET.q|0)+1;NET.pc={t:'cmd',q:NET.q,c};netSend(NET.pc)}
@@ -2600,12 +2624,12 @@ const AI={
   {name:'強い',N:10,rl:2,eps:0,  deck:false,rules:true, lethal:true, pk:true},
   {name:'最強',N:16,rl:2,eps:0,  deck:true, rules:true, lethal:true, pk:true}
  ],
- topK:16,rollTurns:40,budgetMs:1500,prior:0.06,spCost:0.02,atkLoss:0.10,cutZ:1.5,fieldBonus:0.05,ijCost:0.08,pkVarMax:10,pkProbeMax:16,pkAltMax:6,ver:'cpu-20261026-aurora',sunKeep:0.15,sunVert:0.10,sunNoSh:0.30,v2:[true,true],v2N:20,v2LossCut:1,v2Plan:true,maxActs:60,fast:false,stats:{dec:0,roll:0,fail:0,lethalMiss:0,lethalForce:0,noop:0,ms:0,known:0,pkProbe:0,pkAlt:0,pkNoop:0}};
+ topK:16,rollTurns:40,budgetMs:1500,prior:0.06,spCost:0.02,atkLoss:0.10,cutZ:1.5,fieldBonus:0.05,ijCost:0.08,pkVarMax:10,pkProbeMax:16,pkAltMax:6,ver:'cpu-20261113-hammerfix',sunKeep:0.15,sunVert:0.10,sunNoSh:0.30,v2:[true,true],v2N:20,v2LossCut:1,v2Plan:true,maxActs:60,fast:false,stats:{dec:0,roll:0,fail:0,lethalMiss:0,lethalForce:0,noop:0,ms:0,known:0,pkProbe:0,pkAlt:0,pkNoop:0}};
 const aiCf=ci=>AI.cfg[Math.max(0,Math.min(3,LV[ci]|0))];
 const CARDSET=new Set();
 const aiNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
 function aiClone(src){src=src||G;if(!CARDSET.size)ALLC.forEach(c=>CARDSET.add(c));const memo=new Map();
- const cl=o=>{if(o===null||typeof o!=='object')return o;if(CARDSET.has(o))return o;if(memo.has(o))return memo.get(o);
+ const cl=o=>{if(o===null||typeof o!=='object')return o;if(CARDSET.has(o)||isInst(o))return o;if(memo.has(o))return memo.get(o);
   if(Array.isArray(o)){const r=new Array(o.length);memo.set(o,r);for(let i=0;i<o.length;i++)r[i]=cl(o[i]);return r}
   const r={};memo.set(o,r);for(const k in o){const v=o[k];r[k]=typeof v==='function'?v:cl(v)}return r};
  const S={};for(const k in src){if(k==='hist'){S.hist=[];continue}if(k==='pend'||k==='ab'){S[k]=k==='pend'?[]:null;continue}S[k]=cl(src[k])}return S}
@@ -2920,7 +2944,7 @@ function aiPointlessLoss(ci,a){
  if(!m||!d||beats(m.c,d.c,ci,m,d)>=0)return false;
  // 倒されることで利益が出るカード・装備は犠牲攻撃を許可
  const ef=(m.c.effect||'')+' '+(m.eq||[]).map(x=>x.effect||x.name||'').join(' ');
- if(/倒されたとき|手札へ戻る|シールド.*ブレイク|道連れ|身代/.test(ef))return false;
+ if(/倒された(?:とき|時)|手札へ戻る|道連れ|身代/.test(ef))return false;
  // 相手のまもるを消費させる、強制攻撃、特殊な連続攻撃はロールアウト比較に残す
  if(d.c.guard||gg(d,1-ci)||eq(d,'guard')>0||m.c.chain||m.c.xatk)return false;
  return true;
@@ -2974,14 +2998,22 @@ window.cpuAiVersion=()=>AI.ver;
 <script>
 // ---- 画面の比率：ここ（w と h）だけを変えれば、全体がその比率に合う。URLに ?stage=430x932 のように付けて試すこともできる ----
 // ---- 画面の向き：端末を横にしても、画面は縦長のまま（舞台を端末の回転の逆に回して、端末に対する向きを変えない）。?rot=off で回さない、?rot=flip で回す向きを逆にする ----
-const STG={w:430,h:910,cw:72,k:1,rot:0,cx:0,cy:0};   // cw：カードの幅（図鑑のカードと同じ。高さは 90/62 倍）
-(function(){const qs=new URLSearchParams(location.search),q=qs.get('stage'),m=q&&q.match(/^(\d+)x(\d+)$/),rm=qs.get('rot')||'';if(m){STG.w=+m[1];STG.h=+m[2]}const cq=+qs.get('card');if(cq>=40&&cq<=140)STG.cw=cq;
+const STG={w:430,h:910,dw:430,dh:910,bs:6,cw:72,k:1,rot:0,cx:0,cy:0};   // cw：カードの幅（図鑑のカードと同じ。高さは 90/62 倍）
+(function(){const qs=new URLSearchParams(location.search),q=qs.get('stage'),m=q&&q.match(/^(\d+)x(\d+)$/),rm=qs.get('rot')||'',fo=qs.get('fill')==='off';if(m){STG.dw=STG.w=+m[1];STG.dh=STG.h=+m[2]}const cq=+qs.get('card');if(cq>=40&&cq<=140)STG.cw=cq;
  const st=document.getElementById('stage'),fit=document.getElementById('fit'),o=Element.prototype.getBoundingClientRect;
- st.style.setProperty('--sw',STG.w+'px');st.style.setProperty('--sh',STG.h+'px');st.style.setProperty('--cw',STG.cw+'px');
+ st.style.setProperty('--sw',STG.dw+'px');st.style.setProperty('--sh',STG.dh+'px');st.style.setProperty('--cw',STG.cw+'px');
  function angle(){const so=screen.orientation;if(so&&typeof so.angle==='number')return so.angle;if(typeof window.orientation==='number')return (360-window.orientation)%360;return 0}
- function fitStage(){const cs=getComputedStyle(fit),pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0,pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0,W=innerWidth-pl-pr,H=innerHeight-pt-pb,a=angle();
-  let rot=0;if(rm!=='off'&&W>H&&STG.h>STG.w&&(a===90||a===270))rot=(a===90?-90:90)*(rm==='flip'?-1:1);   // 端末が横向きのとき：端末の回転を打ち消す（パソコンなど、回転していない横長はそのまま左右に黒）
-  const k=Math.min((rot?H:W)/STG.w,(rot?W:H)/STG.h);STG.k=k;STG.rot=rot;STG.cx=pl+W/2;STG.cy=pt+H/2;
+ function fitStage(){const cs=getComputedStyle(fit),pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0,pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0,Wf=innerWidth,Hf=innerHeight,W=Wf-pl-pr,H=Hf-pt-pb,a=angle(),dw=STG.dw,dh=STG.dh;
+  let rot=0;if(rm!=='off'&&W>H&&dh>dw&&(a===90||a===270))rot=(a===90?-90:90)*(rm==='flip'?-1:1);   // 端末が横向きのとき：端末の回転を打ち消す（パソコンなど、回転していない横長はそのまま左右に黒）
+  const full=!rot&&!fo&&Wf<=700;   // スマホの縦：舞台を表示領域いっぱいに広げ、背景を端まで描く（それ以外は従来どおり設計サイズの舞台＋黒い余白）
+  let k=Math.min((rot?H:W)/dw,(rot?W:H)/dh);
+  if(full&&H/dh<W/dw){const bs=STG.bs,k1=H/(dh-bs);k=Math.min((bs*k1<pb)?k1:(H+pb)/dh,W/dw)}   // 高さで決まる端末：下の安全領域のうち、舞台の下にもともとある余白(bs)ぶんは重ねてよい（全体は縮めすぎない）
+  STG.k=k;STG.rot=rot;
+  if(full){const res=Math.max(0,pb-STG.bs*k),ex=Math.max(0,W/k-dw),ey=Math.max(0,(Hf-pt-res)/k-dh),gy=Math.min(ey,40),P=v=>Math.round(v*100)/100+'px';   // res：ホームインジケータと重ねないために空ける下の高さ／ex,ey：設計サイズより余った分（左右は余白、縦は最大40まで中身が伸び、残りは余白）
+   STG.w=Wf/k;STG.h=(Hf-pt)/k;STG.cx=Wf/2;STG.cy=pt+(Hf-pt)/2;
+   st.style.setProperty('--fw',P(STG.w));st.style.setProperty('--fh',P(STG.h));st.style.setProperty('--pl',P(pl/k+ex/2));st.style.setProperty('--pr',P(pr/k+ex/2));st.style.setProperty('--pt',P((ey-gy)/2));st.style.setProperty('--pb',P(res/k+(ey-gy)/2));
+   document.documentElement.classList.add('full')}
+  else{STG.w=dw;STG.h=dh;STG.cx=pl+W/2;STG.cy=pt+H/2;['--fw','--fh','--pt','--pr','--pb','--pl'].forEach(n=>st.style.removeProperty(n));document.documentElement.classList.remove('full')}
   st.style.left=STG.cx+'px';st.style.top=STG.cy+'px';st.style.setProperty('--k',k);st.style.setProperty('--r',rot+'deg')}
  fitStage();addEventListener('resize',fitStage);addEventListener('orientationchange',()=>{fitStage();setTimeout(fitStage,150);setTimeout(fitStage,500)});if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);try{screen.orientation.addEventListener('change',()=>{fitStage();setTimeout(fitStage,150)})}catch(e){}
  try{const lk=()=>{try{screen.orientation.lock('portrait').catch(()=>{})}catch(e){}};lk();addEventListener('pointerdown',lk,{once:true})}catch(e){}   // 縦向き固定が使える環境（全画面・ホーム画面のアプリなど）では固定する
