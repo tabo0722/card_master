@@ -2987,14 +2987,14 @@ const STG={w:430,h:880,cw:72,k:1,rot:0,cx:0,cy:0};   // cw：カードの幅（�
  st.style.setProperty('--sw',STG.w+'px');st.style.setProperty('--sh',STG.h+'px');st.style.setProperty('--cw',STG.cw+'px');
  function angle(){const so=screen.orientation;if(so&&typeof so.angle==='number')return so.angle;if(typeof window.orientation==='number')return (360-window.orientation)%360;return 0}
  // 画面サイズの診断（設定の「画面サイズの診断」または URL の ?debug）：舞台の左上に数値、画面の下端（赤）と innerHeight（黄）に細い線を出す
-function fitDbg(W,H,k,pt,pb,pl,pr,sa){const fit=document.getElementById('fit'),st=document.getElementById('stage');if(!fit||!st)return;
+function fitDbg(W,H,k,pt,pb,pl,pr,sa,pbE){const fit=document.getElementById('fit'),st=document.getElementById('stage');if(!fit||!st)return;
  const on=qs.get('debug')!==null||(typeof DBG!=='undefined'&&DBG);let d=document.getElementById('fitdbg');const old=[...document.querySelectorAll('.fitdbgl')];
  if(!on){if(d)d.remove();old.forEach(e=>e.remove());return}
  if(!d){d=document.createElement('div');d.id='fitdbg';d.style.cssText='position:absolute;left:0;top:0;z-index:99999;pointer-events:none;background:rgba(0,0,0,.78);color:#0f0;font:10px/1.35 monospace;padding:3px 5px;white-space:pre';st.appendChild(d)}
  const pr2=u=>{try{const e=document.createElement('div');e.style.cssText='position:fixed;left:0;top:0;width:1px;visibility:hidden;pointer-events:none;height:'+u;fit.appendChild(e);const h=e.clientHeight;e.remove();return h}catch(x){return '-'}};
  const vv=window.visualViewport;
  d.textContent='inner '+innerWidth+'x'+innerHeight+'  vv '+(vv?Math.round(vv.width)+'x'+Math.round(vv.height):'-')+'  fit '+fit.clientWidth+'x'+fit.clientHeight+
-  '\nscreen '+screen.width+'x'+screen.height+'  avail '+screen.availWidth+'x'+screen.availHeight+'  safe T'+pt+' B'+pb+' L'+pl+' R'+pr+
+  '\nscreen '+screen.width+'x'+screen.height+'  avail '+screen.availWidth+'x'+screen.availHeight+'  safe T'+pt+' B'+pb+(pbE!==pb?'→'+pbE:'')+' L'+pl+' R'+pr+
   '\nvh '+pr2('100vh')+'  dvh '+pr2('100dvh')+'  lvh '+pr2('100lvh')+'  svh '+pr2('100svh')+'  fill '+pr2('-webkit-fill-available')+
   '\nstandalone '+sa+'  used '+Math.round(W)+'x'+Math.round(H)+'  k '+k.toFixed(3)+
   '\n赤線＝画面の下端（screen.height）　黄線＝innerHeight\n赤線が見えない＝その下は画面に出ていない';
@@ -3004,11 +3004,13 @@ function fitStage(){const cs=getComputedStyle(fit),pl=parseFloat(cs.paddingLeft)
   // ホーム画面のアプリ（縦向き）：iPhoneでは innerHeight が実際の画面より小さく返ることがあるので、#fit（画面いっぱいの固定要素）の高さ・visualViewport の高さのうち大きい方を使う（画面の高さを超えない）
   let IW=innerWidth,IH=innerHeight;const sa=navigator.standalone===true||(matchMedia&&matchMedia('(display-mode: standalone)').matches);
   if(sa&&IH>IW){const vv=window.visualViewport;IH=Math.max(IH,fit.clientHeight||0,vv?vv.height:0);const sh=Math.max(screen.height||0,screen.width||0);if(sh)IH=Math.min(IH,sh)}
-  const W=IW-pl-pr,H=IH-pt-pb;
+  // 表示範囲の下が画面の下端より手前で終わっているとき（画面との差＝gap）は、その分だけ下の安全領域（ホームバー）に重ならない。重ならない分は引かない（gap が安全領域以上なら引かない／画面いっぱいなら従来どおり引く）
+  let pbE=pb;if(sa&&IH>IW){const sh=Math.max(screen.height||0,screen.width||0);if(sh)pbE=Math.max(0,pb-Math.max(0,sh-IH))}
+  const W=IW-pl-pr,H=IH-pt-pbE;
   let rot=0;if(rm!=='off'&&W>H&&STG.h>STG.w&&(a===90||a===270))rot=(a===90?-90:90)*(rm==='flip'?-1:1);   // 端末が横向きのとき：端末の回転を打ち消す（パソコンなど、回転していない横長はそのまま左右に黒）
   const k=Math.min((rot?H:W)/STG.w,(rot?W:H)/STG.h);STG.k=k;STG.rot=rot;STG.cx=pl+W/2;STG.cy=pt+H/2;
   st.style.left=STG.cx+'px';st.style.top=STG.cy+'px';st.style.setProperty('--k',k);st.style.setProperty('--r',rot+'deg');
-   fitDbg(W,H,k,pt,pb,pl,pr,sa)}
+   fitDbg(W,H,k,pt,pb,pl,pr,sa,pbE)}
  window.fitStageNow=fitStage;fitStage();addEventListener('resize',fitStage);addEventListener('orientationchange',()=>{fitStage();setTimeout(fitStage,150);setTimeout(fitStage,500)});if(window.visualViewport)visualViewport.addEventListener('resize',fitStage);try{screen.orientation.addEventListener('change',()=>{fitStage();setTimeout(fitStage,150)})}catch(e){}
  try{const lk=()=>{try{screen.orientation.lock('portrait').catch(()=>{})}catch(e){}};lk();addEventListener('pointerdown',lk,{once:true})}catch(e){}   // 縦向き固定が使える環境（全画面・ホーム画面のアプリなど）では固定する
  // 拡大縮小・回転しても、座標を使う処理（カードが飛ぶ演出など）が舞台の中の座標で動くように、位置の取得を舞台の中の座標にそろえる

@@ -2,7 +2,7 @@
 // 画面のHTMLは、つながるときは常にネットから取って保存し直し、つながらないときだけ保存したものを使う（更新が遅れない）。
 // HTMLの名前は index.html でも card-master.html でもよい（どちらで置いても動く）。
 // 版を上げるときは V の数字を変える（古い保存は自動で消える）。
-const V='cardmaster-v1.90';
+const V='cardmaster-v1.91';
 const ASSETS=['./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable-512.png','./apple-touch-icon.png'];
 const PAGES=['./','./index.html','./card-master.html'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all([c.addAll(ASSETS).catch(()=>{}),...PAGES.map(p=>c.add(p).catch(()=>{}))])).then(()=>self.skipWaiting()))});
