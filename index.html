@@ -3002,10 +3002,12 @@ function fitDbg(W,H,k,pt,pb,pl,pr,sa,pbE){const fit=document.getElementById('fit
  if(innerHeight>innerWidth){[[screen.height,'#f00'],[innerHeight,'#ff0']].forEach(([y,c])=>{const e=document.createElement('div');e.className='fitdbgl';e.style.cssText='position:fixed;left:0;width:100%;height:4px;top:'+(y-4)+'px;background:'+c+';pointer-events:none;z-index:2147483647';document.body.appendChild(e)})}}   // 舞台（bodyの直下・transformあり）より手前に出すため、#fitではなくbodyの最後に置く
 function fitStage(){const cs=getComputedStyle(fit),pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0,pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0,a=angle();
   // ホーム画面のアプリ（縦向き）：iPhoneでは innerHeight が実際の画面より小さく返ることがあるので、#fit（画面いっぱいの固定要素）の高さ・visualViewport の高さのうち大きい方を使う（画面の高さを超えない）
-  let IW=innerWidth,IH=innerHeight;const sa=navigator.standalone===true||(matchMedia&&matchMedia('(display-mode: standalone)').matches);
-  if(sa&&IH>IW){const vv=window.visualViewport;IH=Math.max(IH,fit.clientHeight||0,vv?vv.height:0);const sh=Math.max(screen.height||0,screen.width||0);if(sh)IH=Math.min(IH,sh)}
+  // iPhoneのホーム画面のアプリ（navigator.standalone）だけの補正。Androidなどでは screen.height が表示範囲とかけ離れた値になることがあり、使うと盤面が縮むので使わない
+  let IW=innerWidth,IH=innerHeight;const sa=navigator.standalone===true||(matchMedia&&matchMedia('(display-mode: standalone)').matches),ios=navigator.standalone===true;
+  const SH=Math.max(screen.height||0,screen.width||0),shOk=SH>=IH;   // 画面の高さが表示範囲より小さいのは不自然なので、そのときは画面の高さを使わない
+  if(ios&&IH>IW){const vv=window.visualViewport;IH=Math.max(IH,fit.clientHeight||0,vv?vv.height:0);if(shOk)IH=Math.min(IH,SH)}
   // 表示範囲の下が画面の下端より手前で終わっているとき（画面との差＝gap）は、その分だけ下の安全領域（ホームバー）に重ならない。重ならない分は引かない（gap が安全領域以上なら引かない／画面いっぱいなら従来どおり引く）
-  let pbE=pb;if(sa&&IH>IW){const sh=Math.max(screen.height||0,screen.width||0);if(sh)pbE=Math.max(0,pb-Math.max(0,sh-IH))}
+  let pbE=pb;if(ios&&IH>IW&&shOk)pbE=Math.max(0,pb-(SH-IH))
   const W=IW-pl-pr,H=IH-pt-pbE;
   let rot=0;if(rm!=='off'&&W>H&&STG.h>STG.w&&(a===90||a===270))rot=(a===90?-90:90)*(rm==='flip'?-1:1);   // 端末が横向きのとき：端末の回転を打ち消す（パソコンなど、回転していない横長はそのまま左右に黒）
   const k=Math.min((rot?H:W)/STG.w,(rot?W:H)/STG.h);STG.k=k;STG.rot=rot;STG.cx=pl+W/2;STG.cy=pt+H/2;
